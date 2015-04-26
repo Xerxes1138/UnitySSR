@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b611c308856e5364bac43bc6c6813f77
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - Jitter: {fileID: 2800000, guid: 8b5cb412ba28d994f8b53d2126f0214a, type: 3}
+  - rendererShader: {fileID: 4800000, guid: 2c2e2d33cefcffd49baa543844d94936, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
