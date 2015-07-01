@@ -42,32 +42,41 @@ namespace unitySSR
 		SerializedProperty smoothnessRange;
 		SerializedProperty textureSize;
 		SerializedProperty sampleQuality;
+		SerializedProperty brdfModel;
+		SerializedProperty pointModel;
+		//SerializedProperty highQualitySampling;
 
 		void OnEnable()
 		{
-				serObj = new SerializedObject (target);
-				numSteps = serObj.FindProperty("numSteps");
-				textureSize = serObj.FindProperty("textureSize");
-				smoothnessRange = serObj.FindProperty("smoothnessRange");
-				reflectionEdgeFactor = serObj.FindProperty("reflectionEdgeFactor");
-				sampleQuality = serObj.FindProperty("sampleQuality");
+			serObj = new SerializedObject (target);
+			numSteps = serObj.FindProperty ("numSteps");
+			textureSize = serObj.FindProperty ("textureSize");
+			smoothnessRange = serObj.FindProperty ("smoothnessRange");
+			reflectionEdgeFactor = serObj.FindProperty ("reflectionEdgeFactor");
+			sampleQuality = serObj.FindProperty ("sampleQuality");
+			brdfModel = serObj.FindProperty ("brdfModel");
+			pointModel = serObj.FindProperty ("pointModel");
 		}
 
 		public override void OnInspectorGUI()
 		{
-				GUILayout.Label ("General Parameters", EditorStyles.boldLabel);
-				smoothnessRange.floatValue = EditorGUILayout.Slider (new GUIContent ("Smoothness Range","Specify the smoothness range ssr can read"),smoothnessRange.floatValue, 0.0f, 1.0f);
-				reflectionEdgeFactor.floatValue = EditorGUILayout.Slider(new GUIContent ("Edge Mask Size", "Specify the size of the mask around screen edge"), reflectionEdgeFactor.floatValue, 0.1f, 0.8f);
+			GUILayout.Label ("General Parameters", EditorStyles.boldLabel);
 
-				GUILayout.Label ("Ray Parameters", EditorStyles.boldLabel);
+			smoothnessRange.floatValue = EditorGUILayout.Slider (new GUIContent ("Smoothness Range","Specify the smoothness range ssr can read"),smoothnessRange.floatValue, 0.0f, 1.0f);
+			reflectionEdgeFactor.floatValue = EditorGUILayout.Slider(new GUIContent ("Edge Mask Size", "Specify the size of the mask around screen edge"), reflectionEdgeFactor.floatValue, 0.1f, 0.8f);
 
-				numSteps.intValue = EditorGUILayout.IntSlider( new GUIContent ("Search Iteration","Specify how far the ray can iterate in the depth buffer"), numSteps.intValue, 1, 128);
+			GUILayout.Label ("Ray Parameters", EditorStyles.boldLabel);
 
-				GUILayout.Label ("BRDF Parameters", EditorStyles.boldLabel);
-				EditorGUILayout.PropertyField (sampleQuality, new GUIContent ("Sample Quality","Specify the number of samples used for BRDF blurring"));
-				EditorGUILayout.PropertyField (textureSize, new GUIContent ("Texture Size","Specify the size of the mip mapped texture"));
+			numSteps.intValue = EditorGUILayout.IntSlider( new GUIContent ("Search Iteration","Specify how far the ray can iterate in the depth buffer"), numSteps.intValue, 1, 128);
 
-				serObj.ApplyModifiedProperties();
+			GUILayout.Label ("BRDF Parameters", EditorStyles.boldLabel);
+
+			EditorGUILayout.PropertyField (pointModel, new GUIContent ("Sampling Method", "Hammersley gives better reflection blur but also increase cost"));
+			EditorGUILayout.PropertyField (brdfModel, new GUIContent ("Sampling Model","Choose between Blinn and GGX"));
+			EditorGUILayout.PropertyField (sampleQuality, new GUIContent ("Sampling Quality","Specify the number of samples used for BRDF blurring"));
+			EditorGUILayout.PropertyField (textureSize, new GUIContent ("Texture Size","Specify the size of the mip mapped texture"));
+
+			serObj.ApplyModifiedProperties();
 		}
 	}
 }

@@ -52,6 +52,22 @@ namespace unitySSR
 
 		public TextureSize textureSize = TextureSize._512;
 
+		public enum PointModel
+		{
+			Hammersley,
+			Noise,
+		}
+
+		public PointModel pointModel = PointModel.Noise;
+
+		public enum BRDFModel
+		{
+			Blinn,
+			GGX,
+		};
+
+		public BRDFModel brdfModel = BRDFModel.Blinn;
+
 		public enum SampleQuality  
 		{
 			Low = 2,
@@ -80,7 +96,7 @@ namespace unitySSR
 
 		void goVariable()
 		{
-			jitter = Resources.Load("NOISE_128X128_JITTER",typeof(Texture)) as Texture;
+			jitter = Resources.Load("NOISE_64X64_JITTER",typeof(Texture)) as Texture;
 			rendererMaterial.SetTexture("_Jitter",jitter);
 			dither = Resources.Load("NOISE_4X4_JITTER",typeof(Texture)) as Texture;
 			rendererMaterial.SetTexture("_Dither",dither);
@@ -120,6 +136,17 @@ namespace unitySSR
 				Graphics.Blit (source,mip, rendererMaterial,1); // Ray marching pass
 						
 				rendererMaterial.SetTexture ("_Mip", mip); // result of the ray marching pass is stored in the mip render texture
+
+				if(brdfModel == BRDFModel.GGX)
+					rendererMaterial.EnableKeyword("_BRDF_GGX");
+				if(brdfModel == BRDFModel.Blinn)
+					rendererMaterial.DisableKeyword("_BRDF_GGX");
+
+				if(pointModel == PointModel.Hammersley)
+					rendererMaterial.EnableKeyword("_SAMPLING_HIGH");
+				if(pointModel == PointModel.Noise)
+					rendererMaterial.DisableKeyword("_SAMPLING_HIGH");
+
 
 				Graphics.Blit (source,destination, rendererMaterial,(int)sampleQuality); // low = pass 2; medium = pass 3, high = pass 4
 
