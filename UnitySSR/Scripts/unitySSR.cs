@@ -29,18 +29,20 @@ namespace unitySSR
 {
 	[ExecuteInEditMode]
 	[RequireComponent(typeof (Camera))]
-	[AddComponentMenu("Image Effects/Rendering/Unity 5 Screen Space Reflection")]
-
+	[AddComponentMenu("cCharkes/Image Effects/Rendering/Unity 5 Screen Space Reflection")]
+	
 	public class unitySSR : MonoBehaviour
 	{
-
+		
 		public bool useSSR = true;
 		public  int numSteps = 128;
-
+		
 		public float reflectionEdgeFactor = 0.25f;
-
+		
 		public float smoothnessRange = 1.0f;
 
+		public float rayBias = 0.3f;
+		
 		public enum TextureSize
 		{
 			_128 = 128,
@@ -49,37 +51,37 @@ namespace unitySSR
 			_1024 = 1024,
 			_2048 = 2048,
 		};
-
+		
 		public TextureSize textureSize = TextureSize._512;
-
+		
 		public enum PointModel
 		{
 			Hammersley,
 			Noise,
 		}
-
+		
 		public PointModel pointModel = PointModel.Noise;
-
+		
 		public enum BRDFModel
 		{
 			Blinn,
 			GGX,
 		};
-
+		
 		public BRDFModel brdfModel = BRDFModel.Blinn;
-
+		
 		public enum SampleQuality  
 		{
 			Low = 2,
 			Medium = 3,
 			High = 4,
 		};
-
+		
 		public SampleQuality sampleQuality = SampleQuality.Medium; // good value is 32/Medium but 64/High may gives better results but with perf impact
-
+		
 		private Texture jitter;
 		private Texture dither;
-
+		
 		static Material m_rendererMaterial = null;
 		protected Material rendererMaterial
 		{
@@ -93,22 +95,20 @@ namespace unitySSR
 				return m_rendererMaterial;
 			} 
 		}
-
+		
 		void goVariable()
 		{
-			jitter = Resources.Load("NOISE_64X64_JITTER",typeof(Texture)) as Texture;
-			rendererMaterial.SetTexture("_Jitter",jitter);
 			dither = Resources.Load("NOISE_4X4_JITTER",typeof(Texture)) as Texture;
 			rendererMaterial.SetTexture("_Dither",dither);
-
+			rendererMaterial.SetFloat ("_rayBias", rayBias);
 			rendererMaterial.SetFloat ("_smoothnessRange", smoothnessRange);
 			rendererMaterial.SetFloat("_edgeFactor",reflectionEdgeFactor);
-
+			
 			rendererMaterial.SetInt("_numSteps",numSteps);
-
+			
 			rendererMaterial.SetInt("_textureSize", (int)textureSize);
 		}
-
+		
 		void Awake ()
 		{
 			InitCamera();
@@ -118,54 +118,58 @@ namespace unitySSR
 		{
 			GetComponent<Camera>().depthTextureMode = DepthTextureMode.Depth;	
 		}
-
+		
 		public void OnRenderImage(RenderTexture source, RenderTexture destination) 
 		{
-
+			
 			if(useSSR == true )
 			{
 				goMatrix();
 				goVariable();
 
-				RenderTexture mip = RenderTexture.GetTemporary((int)textureSize ,(int)textureSize ,16,RenderTextureFormat.ARGBHalf); // Using a square texture to get mip map as Unity can't generate mip map on a non squared texture
+				int size = (int)textureSize;
+
+				RenderTexture mip = RenderTexture.GetTemporary(size ,size , 16, RenderTextureFormat.ARGBHalf); // Using a square texture to get mip map as Unity can't generate mip map on a non squared texture
 				mip.isPowerOfTwo = true;
 				mip.useMipMap = true;
 				mip.generateMips = true;
 				mip.filterMode = FilterMode.Trilinear;
-
+				
 				Graphics.Blit (source,mip, rendererMaterial,1); // Ray marching pass
-						
+				
 				rendererMaterial.SetTexture ("_Mip", mip); // result of the ray marching pass is stored in the mip render texture
-
+				
 				if(brdfModel == BRDFModel.GGX)
 					rendererMaterial.EnableKeyword("_BRDF_GGX");
 				if(brdfModel == BRDFModel.Blinn)
 					rendererMaterial.DisableKeyword("_BRDF_GGX");
-
+				
 				if(pointModel == PointModel.Hammersley)
 					rendererMaterial.EnableKeyword("_SAMPLING_HIGH");
 				if(pointModel == PointModel.Noise)
 					rendererMaterial.DisableKeyword("_SAMPLING_HIGH");
 
-
 				Graphics.Blit (source,destination, rendererMaterial,(int)sampleQuality); // low = pass 2; medium = pass 3, high = pass 4
-
+				
 				RenderTexture.ReleaseTemporary(mip);
 			}
 			else
 			{
 				Graphics.Blit (source,destination, rendererMaterial,0);
 			}
-
+			
 			RenderTexture.active = null;
 		}
-
+		
 		void goMatrix() 
 		{
-			rendererMaterial.SetMatrix("_WorldViewMatrix", GetComponent<Camera>().worldToCameraMatrix);
-			rendererMaterial.SetMatrix("_WorldViewInverseMatrix", GetComponent<Camera>().worldToCameraMatrix.inverse.transpose);
-			rendererMaterial.SetMatrix("_ViewProjectionInverseMatrix", (GetComponent<Camera>().projectionMatrix*GetComponent<Camera>().worldToCameraMatrix).inverse );
-			Matrix4x4 projectionMatrix = GetComponent<Camera>().projectionMatrix;
+			Camera camera = GetComponent<Camera>();
+
+			rendererMaterial.SetMatrix("_WorldViewMatrix", camera.worldToCameraMatrix);
+			rendererMaterial.SetMatrix("_WorldViewInverseMatrix", camera.worldToCameraMatrix.inverse.transpose);
+			rendererMaterial.SetMatrix("_ViewProjectionInverseMatrix", (camera.projectionMatrix*camera.worldToCameraMatrix).inverse );
+
+			Matrix4x4 projectionMatrix = camera.projectionMatrix;
 			bool d3d = SystemInfo.graphicsDeviceVersion.IndexOf("Direct3D") > -1;
 			if (d3d) 
 			{
@@ -176,6 +180,7 @@ namespace unitySSR
 				}
 			}
 			rendererMaterial.SetMatrix("_ProjectionMatrix", projectionMatrix);
+			rendererMaterial.SetMatrix( "_InverseProjectionMatrix", projectionMatrix.inverse);
 		}
 	}
 }
