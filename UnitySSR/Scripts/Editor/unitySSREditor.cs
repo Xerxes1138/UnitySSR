@@ -60,6 +60,8 @@ namespace unitySSR
 
 		public override void OnInspectorGUI()
 		{
+			serObj.Update();
+
 			GUILayout.Label ("General Parameters", EditorStyles.boldLabel);
 
 			smoothnessRange.floatValue = EditorGUILayout.Slider (new GUIContent ("Smoothness Range","Specify the smoothness range ssr can read"),smoothnessRange.floatValue, 0.0f, 1.0f);
