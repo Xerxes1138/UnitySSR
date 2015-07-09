@@ -189,6 +189,8 @@ Shader "Hidden/Unity SSR"
 
 		roughness = min(_smoothnessRange, roughness);
       	
+      	half roughnessMask = 1 - roughness;
+      	
       	float depth = F_SchlickMono(0.4f, NdotV); // Used depth at first but  it appears that using a NdotV gives a much more predictable result
 
       	roughness = lerp(roughness, 0.0f, depth);
@@ -224,7 +226,7 @@ Shader "Hidden/Unity SSR"
 		}
 		sampleColor.rgb /= NumSamples;
 
-		return float4(frag.rgb + sampleColor.rgb * F_Schlick(specular.rgb, NdotV) * occlusion * (1 - roughness), 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
+		return float4(frag.rgb + sampleColor.rgb * F_Schlick(specular.rgb, NdotV) * occlusion * roughnessMask, 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
 	}
 
 	struct appdata 
