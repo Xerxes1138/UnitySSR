@@ -40,6 +40,7 @@ Shader "Hidden/Unity SSR"
 	uniform sampler2D	_CameraGBufferTexture0; // Diffuse RGB and Occlusion A
 	uniform sampler2D	_CameraGBufferTexture1; // Specular RGB and Roughness/Smoothness A
 	uniform sampler2D	_CameraGBufferTexture2; // World Normal RGB
+	uniform sampler2D	_CameraReflectionsTexture; // Cubemap reflection 
 	
 	uniform sampler2D	_Dither;
 	uniform sampler2D	_CameraDepthTexture;
@@ -59,6 +60,11 @@ Shader "Hidden/Unity SSR"
 	uniform float4x4	_WorldViewInverseMatrix;
 	uniform float4x4	_InverseProjectionMatrix;
 	
+	inline float sqr(float x) 
+	{ 
+		return x*x; 
+	}
+	
 	// Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
 	// Lagarde 2012, "Spherical Gaussian approximation for Blinn-Phong, Phong and Fresnel"
 	inline float3 F_Schlick(float3 SpecularColor,float LdotH)
@@ -71,6 +77,19 @@ Shader "Hidden/Unity SSR"
 	inline float F_SchlickMono(float SpecularColor,float LdotH)
 	{
 	    return SpecularColor + ( 1.0f - SpecularColor ) * exp2( (-5.55473 * LdotH - 6.98316) * LdotH );
+	}
+	
+	// [ Lazarov 2013, "Getting More Physical in Call of Duty: Black Ops II" ]
+	// Changed by EPIC
+	inline half3 F_LazarovApprox( half3 SpecularColor, half Roughness, half NoV )
+	{
+		const half4 c0 = { -1, -0.0275, -0.572, 0.022 };
+		const half4 c1 = { 1, 0.0425, 1.04, -0.04 };
+		half4 r = Roughness * c0 + c1;
+		half a004 = min( r.x * r.x, exp2( -9.28 * NoV ) ) * r.x + r.y;
+		half2 AB = half2( -1.04, 1.04 ) * a004 + r.zw;
+
+		return SpecularColor * AB.x + AB.y;
 	}
 	
 	inline float calcLOD(int cubeSize, float pdf, int NumSamples)
@@ -165,7 +184,8 @@ Shader "Hidden/Unity SSR"
 		half4 gbuffer0 = tex2D (_CameraGBufferTexture0, uv); // Diffuse RGB and Occlusion A
 		half4 gbuffer1 = tex2D (_CameraGBufferTexture1, uv); // Specular RGB and Roughness/Smoothness A
 		half4 gbuffer2 = tex2D (_CameraGBufferTexture2, uv); // World Normal RGB
-
+		half4 gbuffer3 = tex2D( _CameraReflectionsTexture, uv); // Cubemap reflection buffer RGB
+		
 		float4 specular = gbuffer1;
 		
 		float occlusion = gbuffer0.a;
@@ -190,14 +210,17 @@ Shader "Hidden/Unity SSR"
 		roughness = min(_smoothnessRange, roughness);
       	
       	half roughnessMask = 1 - roughness;
-      	
+      	//half roughnessMask = max(1-roughness, 0.3);
+//      	half roughnessMask = 0;
+//      	if(roughness <= 0.3)
+//      		roughnessMask = 1.0;
+      		
       	float depth = F_SchlickMono(0.4f, NdotV); // Used depth at first but  it appears that using a NdotV gives a much more predictable result
-
-      	roughness = lerp(roughness, 0.0f, depth);
+      	roughness = lerp(lerp(roughness, 0.0f, depth), roughness, sqr(roughness)); // View dependent roughness based on the view angle
 
 		float4 sampleColor = float4(0,0,0,1);
 		
-		float2 jitter4x4 = tex2D( _Dither, uv * _ScreenParams.xy / 4 );
+		float2 jitter4x4 = tex2D( _Dither, uv * _ScreenParams.xy / 64 );
 
 		const int NumSamples = numSample;
 
@@ -222,11 +245,11 @@ Shader "Hidden/Unity SSR"
 			
 			float mip = calcLOD(_textureSize, H.w, NumSamples); // Calculate lod based on texture size and pdf from H
 			
-			sampleColor.rgb += tex2Dlod(_Mip, float4(uv.xy + H.xy, 0, mip));
+			sampleColor += tex2Dlod(_Mip, float4(uv.xy + H.xy, 0, mip));
 		}
-		sampleColor.rgb /= NumSamples;
+		sampleColor /= NumSamples;
 
-		return float4(frag.rgb + sampleColor.rgb * F_Schlick(specular.rgb, NdotV) * occlusion * roughnessMask, 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
+		return float4( (frag.rgb - gbuffer3.rgb)  + lerp(gbuffer3.rgb,sampleColor.rgb * F_LazarovApprox(specular.rgb, roughness, NdotV) * occlusion * roughnessMask,saturate(sampleColor.a)), 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
 	}
 
 	struct appdata 
@@ -295,6 +318,7 @@ Shader "Hidden/Unity SSR"
 			else
 			{
 		        rayStart = samplePos;
+		        rayDir *= 1.1;
 		        samplePos += rayDir;
 			}
 		}
@@ -321,18 +345,19 @@ Shader "Hidden/Unity SSR"
 
 		int NumSteps = _numSteps;
 		
-		float stepOffset = tex2D( _Dither, uv * _textureSize / 4 );
+		float stepOffset = tex2D( _Dither, uv * _textureSize / 64 );
 		
 		float3 R = normalize(reflect(normalize(viewPos), normalize(viewNormal)));
 		
-		float4 ray = RayMarch(R, NumSteps, viewPos, scrPos, uv, stepOffset);
+		float4 ray = RayMarch(R, NumSteps, viewPos, scrPos, uv, stepOffset.x);
 	
 		float borderDist = min(1-max(ray.x, ray.y), min(ray.x, ray.y));
 		float borderAtten = saturate(borderDist > _edgeFactor ? 1 : borderDist / _edgeFactor);
-
-		sampleColor.rgb = tex2D(_MainTex, ray.xy);
 		
-		return  float4(sampleColor.rgb * ray.w * borderAtten, 1);
+		half4 gbuffer3 = tex2D( _CameraReflectionsTexture, ray.xy); // Cubemap reflection buffer RGB
+		sampleColor.rgb =  tex2D(_MainTex, ray.xy)  - gbuffer3; // Remove cubemap from _MainTex
+		
+		return  float4(sampleColor.rgb * ray.w * borderAtten, ray.w * borderAtten);
 	}
 
 	float4 frag( v2f i ) : SV_Target

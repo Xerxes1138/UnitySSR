@@ -44,7 +44,7 @@ namespace unitySSR
 		SerializedProperty sampleQuality;
 		SerializedProperty brdfModel;
 		SerializedProperty pointModel;
-		//SerializedProperty highQualitySampling;
+		SerializedProperty rayBias;
 
 		void OnEnable()
 		{
@@ -56,11 +56,12 @@ namespace unitySSR
 			sampleQuality = serObj.FindProperty ("sampleQuality");
 			brdfModel = serObj.FindProperty ("brdfModel");
 			pointModel = serObj.FindProperty ("pointModel");
+			rayBias = serObj.FindProperty ("rayBias");
 		}
 
 		public override void OnInspectorGUI()
 		{
-			serObj.Update();
+			serObj.Update ();
 
 			GUILayout.Label ("General Parameters", EditorStyles.boldLabel);
 
@@ -70,6 +71,7 @@ namespace unitySSR
 			GUILayout.Label ("Ray Parameters", EditorStyles.boldLabel);
 
 			numSteps.intValue = EditorGUILayout.IntSlider( new GUIContent ("Search Iteration","Specify how far the ray can iterate in the depth buffer"), numSteps.intValue, 1, 128);
+			rayBias.floatValue = EditorGUILayout.Slider( new GUIContent ("Ray Bias",""), rayBias.floatValue, 0.01f, 0.5f);
 
 			GUILayout.Label ("BRDF Parameters", EditorStyles.boldLabel);
 
@@ -78,7 +80,7 @@ namespace unitySSR
 			EditorGUILayout.PropertyField (sampleQuality, new GUIContent ("Sampling Quality","Specify the number of samples used for BRDF blurring"));
 			EditorGUILayout.PropertyField (textureSize, new GUIContent ("Texture Size","Specify the size of the mip mapped texture"));
 
-			serObj.ApplyModifiedProperties();
+			serObj.ApplyModifiedProperties ();
 		}
 	}
 }

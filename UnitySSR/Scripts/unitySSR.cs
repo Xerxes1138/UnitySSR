@@ -27,7 +27,6 @@ using UnityEngine;
 
 namespace unitySSR
 {
-	[ExecuteInEditMode]
 	[RequireComponent(typeof (Camera))]
 	[AddComponentMenu("cCharkes/Image Effects/Rendering/Unity 5 Screen Space Reflection")]
 	
@@ -81,7 +80,8 @@ namespace unitySSR
 		
 		private Texture jitter;
 		private Texture dither;
-		
+		private RenderTexture mip;
+
 		static Material m_rendererMaterial = null;
 		protected Material rendererMaterial
 		{
@@ -98,7 +98,7 @@ namespace unitySSR
 		
 		void goVariable()
 		{
-			dither = Resources.Load("NOISE_4X4_JITTER",typeof(Texture)) as Texture;
+			dither = Resources.Load("NOISE_64x64_DITHER",typeof(Texture)) as Texture;
 			rendererMaterial.SetTexture("_Dither",dither);
 			rendererMaterial.SetFloat ("_rayBias", rayBias);
 			rendererMaterial.SetFloat ("_smoothnessRange", smoothnessRange);
@@ -118,23 +118,29 @@ namespace unitySSR
 		{
 			GetComponent<Camera>().depthTextureMode = DepthTextureMode.Depth;	
 		}
+
+		void CreateRT()
+		{
+			int size = (int)textureSize;
+			DestroyImmediate (mip);
+			mip = new RenderTexture(size ,size , 16, RenderTextureFormat.ARGBHalf); // Using a square texture to get mip map as Unity can't generate mip map on a non squared texture
+
+			//mip.isPowerOfTwo = true;
+			mip.useMipMap = true;
+			//mip.generateMips = true;
+			mip.filterMode = FilterMode.Trilinear;
+			mip.Create();
+		}
 		
 		public void OnRenderImage(RenderTexture source, RenderTexture destination) 
 		{
-			
+
 			if(useSSR == true )
 			{
+				CreateRT();
 				goMatrix();
 				goVariable();
 
-				int size = (int)textureSize;
-
-				RenderTexture mip = RenderTexture.GetTemporary(size ,size , 16, RenderTextureFormat.ARGBHalf); // Using a square texture to get mip map as Unity can't generate mip map on a non squared texture
-				mip.isPowerOfTwo = true;
-				mip.useMipMap = true;
-				mip.generateMips = true;
-				mip.filterMode = FilterMode.Trilinear;
-				
 				Graphics.Blit (source,mip, rendererMaterial,1); // Ray marching pass
 				
 				rendererMaterial.SetTexture ("_Mip", mip); // result of the ray marching pass is stored in the mip render texture
@@ -150,8 +156,10 @@ namespace unitySSR
 					rendererMaterial.DisableKeyword("_SAMPLING_HIGH");
 
 				Graphics.Blit (source,destination, rendererMaterial,(int)sampleQuality); // low = pass 2; medium = pass 3, high = pass 4
-				
-				RenderTexture.ReleaseTemporary(mip);
+
+
+
+				//RenderTexture.ReleaseTemporary(mip);
 			}
 			else
 			{
@@ -168,7 +176,6 @@ namespace unitySSR
 			rendererMaterial.SetMatrix("_WorldViewMatrix", camera.worldToCameraMatrix);
 			rendererMaterial.SetMatrix("_WorldViewInverseMatrix", camera.worldToCameraMatrix.inverse.transpose);
 			rendererMaterial.SetMatrix("_ViewProjectionInverseMatrix", (camera.projectionMatrix*camera.worldToCameraMatrix).inverse );
-
 			Matrix4x4 projectionMatrix = camera.projectionMatrix;
 			bool d3d = SystemInfo.graphicsDeviceVersion.IndexOf("Direct3D") > -1;
 			if (d3d) 
