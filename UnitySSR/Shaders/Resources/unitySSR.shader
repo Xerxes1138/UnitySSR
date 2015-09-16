@@ -249,7 +249,7 @@ Shader "Hidden/Unity SSR"
 		}
 		sampleColor /= NumSamples;
 
-		return float4( (frag.rgb - gbuffer3.rgb)  + lerp(gbuffer3.rgb,sampleColor.rgb * F_LazarovApprox(specular.rgb, roughness, NdotV) * occlusion * roughnessMask,saturate(sampleColor.a)), 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
+		return float4( max(0.0f,frag.rgb - gbuffer3.rgb)  + lerp(gbuffer3.rgb,sampleColor.rgb * F_LazarovApprox(specular.rgb, roughness, NdotV) * occlusion * roughnessMask,saturate(sampleColor.a)), 1); // We mask the reflection with roughness to prevent too much blur bleeding on rough surfaces
 	}
 
 	struct appdata 
@@ -355,7 +355,7 @@ Shader "Hidden/Unity SSR"
 		float borderAtten = saturate(borderDist > _edgeFactor ? 1 : borderDist / _edgeFactor);
 		
 		half4 gbuffer3 = tex2D( _CameraReflectionsTexture, ray.xy); // Cubemap reflection buffer RGB
-		sampleColor.rgb =  tex2D(_MainTex, ray.xy)  - gbuffer3; // Remove cubemap from _MainTex
+		sampleColor.rgb =  max(0.0f,tex2D(_MainTex, ray.xy)  - gbuffer3); // Remove cubemap from _MainTex
 		
 		return  float4(sampleColor.rgb * ray.w * borderAtten, ray.w * borderAtten);
 	}
