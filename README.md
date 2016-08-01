@@ -9,6 +9,9 @@ An open source screen space reflection for Unity 5 made by Charles Greivelding T
 * Previous frame reprojection giving one free bounce reflection.
 * Convolved scene buffer mip chain.
 
+![Mip Chain](https://dl.dropboxusercontent.com/u/1812933/Unity/MipChain.png)
+
+
 # Requirements
 
 UnitySSR require Unity 5.4 and a shader model 3.0 ( dx9 ) graphic card.
