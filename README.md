@@ -5,6 +5,7 @@ An open source screen space reflection for Unity 5 made by Charles Greivelding T
 # Features
 
 Previous frame reprojection giving one free bounce reflection.
+
 Convolved scene buffer mip chain.
 
 # Requirements
