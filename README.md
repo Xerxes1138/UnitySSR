@@ -6,9 +6,8 @@ An open source screen space reflection for Unity 5 made by Charles Greivelding T
 
 # Features
 
-Previous frame reprojection giving one free bounce reflection.
-
-Convolved scene buffer mip chain.
+* Previous frame reprojection giving one free bounce reflection.
+* Convolved scene buffer mip chain.
 
 # Requirements
 
@@ -22,6 +21,6 @@ Then select your main camera and go to "cCharkes/Image Effects/Rendering/Unity 5
 
 # References
 
-[Michal Valient, Siggraph14] "Reflections and Volumetrics of Killzone Shadow Fall"
-[Tomasz Stachowiak and Yasin Uludag, Siggraph15] "Stochastic Screen-Space Reflections"
-[Michele Giacolone, 2016] "Screen Space Reflections in The Surge"
+- [Michal Valient, Siggraph14] "Reflections and Volumetrics of Killzone Shadow Fall"
+- [Tomasz Stachowiak and Yasin Uludag, Siggraph15] "Stochastic Screen-Space Reflections"
+- [Michele Giacolone, 2016] "Screen Space Reflections in The Surge"
