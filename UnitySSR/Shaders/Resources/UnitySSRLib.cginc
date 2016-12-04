@@ -27,6 +27,8 @@ uniform sampler2D	_MainTex,
 					_MipMapBuffer,
 					_RayCast;
 
+uniform sampler2D	_Noise;
+
 uniform sampler2D	_CameraGBufferTexture0,
 					_CameraGBufferTexture1,
 					_CameraGBufferTexture2,
@@ -55,6 +57,9 @@ uniform float4x4	_InverseViewProjectionMatrix;
 uniform float4x4	_WorldToCameraMatrix;
 uniform float4x4	_CameraToWorldMatrix;
 
+//Debug Options
+uniform int			_UseTemporal;
+
 float sqr(float x)
 {
 	return x*x;
@@ -70,6 +75,7 @@ float4	GetCubeMap (float2 uv) { return tex2D(_CameraReflectionsTexture, uv); }
 float4	GetAlbedo (float2 uv) { return tex2D(_CameraGBufferTexture0, uv); }
 float4	GetSpecular (float2 uv) { return tex2D(_CameraGBufferTexture1, uv); }
 float	GetRoughness (float smoothness) { return max(min(_SmoothnessRange, 1.0 - smoothness), 0.05); }
+float	GetSmoothness (float smoothness) { return max(max(1 - _SmoothnessRange, smoothness), 0.05); }
 float4	GetNormal (float2 uv) { float4 gbuffer2 = tex2D(_CameraGBufferTexture2, uv); return gbuffer2 * 2.0 - 1.0; }
 float4	GetReflection(float2 uv)    { return tex2D(_ReflectionBuffer, uv); }
 float4	GetVelocity(float2 uv)    { return tex2D(_CameraMotionVectorsTexture, uv); }
@@ -122,6 +128,15 @@ float calcLOD(int cubeSize, float pdf)
 {
 	float lod = (0.5 * log2( (cubeSize*cubeSize) / cubeSize ) + 2.0) - 0.5*log2(pdf); 
 	return lod;
+}
+
+float4 TangentToWorld(float3 N, float4 H)
+{
+	float3 UpVector = abs(N.z) < 0.999 ? float3(0,0,1) : float3(1,0,0);
+	float3 T = normalize( cross( UpVector, N ) );
+	float3 B = cross( N, T );
+				 
+	return float4((T * H.x) + (B * H.y) + (N * H.z), H.w);
 }
 	
 static const int2 offsets[7] = {{-3, -3}, {-2, -2}, {-1, -1}, {0, 0}, {1, 1}, {2, 2}, {3, 3}};

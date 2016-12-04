@@ -20,35 +20,51 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
-float4 RayMarch(sampler2D tex, float4x4 _ProjectionMatrix, float3 viewDir, int NumSteps, float3 viewPos, float3 screenPos, float2 uv, float stepOffset)
+float4 RayMarch(sampler2D tex, float4x4 _ProjectionMatrix, float3 viewDir, int NumSteps, float3 viewPos, float3 screenPos, float2 uv, float stepSize)
 {
-		float4 rayProj = mul (_ProjectionMatrix, float4(viewDir + viewPos,1));
-		
-		float3 rayDir = normalize( rayProj.xyz / rayProj.w - screenPos );
-		rayDir.xy *= 0.5;
+	float depth = LinearEyeDepth(UNITY_SAMPLE_DEPTH(tex2D(tex, uv)));
 
-	    float3 rayStart = float3(uv, screenPos.z);
-                    
- 		float stepSize = 1.0 / ( (float)NumSteps + 1.0);
-		rayDir  *= stepOffset * stepSize + stepSize;   
-		                   
-		float3 samplePos = rayStart + rayDir;
+	float4 rayProj = mul (_ProjectionMatrix, float4(viewDir + viewPos, 1.0f));
 
-		float sampleMask = 0;
-		for (int i = 0;  i < NumSteps; i++)
-		{
-			float sampleDepth  = UNITY_SAMPLE_DEPTH(tex2Dlod (tex, float4(samplePos.xy,0,0)));
+	float3 rayDir = normalize( rayProj.xyz / rayProj.w - screenPos );
+	rayDir.xy *= 0.5f;
 
-			//float delta = abs(sampleDepth - samplePos.z); 
+	//float3 rayDir = float3(viewDir.xy - viewPos.xy / viewPos.z * viewDir.z, viewDir.z / viewPos.z) * _Project;
 
-			if (sampleDepth < samplePos.z)  
-			{  
-				sampleMask = 1;// TO FIX !!!
+	float sampleMask = 0.0f;
+
+	float3 rayStart = float3(uv, screenPos.z);
+
+    float3 project = _Project;
+
+	float3 samplePos = rayStart + rayDir * stepSize;
+
+	float mask = 0;
+	for (int i = 0;  i < NumSteps; i++)
+	{
+		float sampleDepth  = LinearEyeDepth(UNITY_SAMPLE_DEPTH(tex2Dlod (tex, float4(samplePos.xy,0,0))));
+				
+		float thickness = LinearEyeDepth(project.z) / depth;
+		float delta = LinearEyeDepth(samplePos.z) - sampleDepth;
+
+		if ( sampleDepth < LinearEyeDepth(samplePos.z) )
+		{  
+			if (0.0 < delta && delta < thickness)
+			{
+				mask = 1;
 				break;
 			}
 			else
-				samplePos += rayDir;
+			{
+				rayDir *= 0.5;
+				samplePos = rayStart + rayDir * stepSize; 
+			} 
 		}
-		
-return float4(samplePos, sampleMask);
+		else
+		{
+		        rayStart = samplePos;
+		        samplePos += rayDir * stepSize;
+		}
+	}
+	return float4(samplePos, mask);
 }

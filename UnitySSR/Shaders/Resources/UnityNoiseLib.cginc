@@ -20,19 +20,36 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
 
+float Hash(float n)
+{
+	return frac(sin(n) * 43758.5453123);
+}
+
+float RandN(float2 pos, float2 random)
+{
+	return frac(sin(dot(pos.xy + random, float2(12.9898, 78.233))) * 43758.5453);
+
+}
+
+float2 RandN2(float2 pos, float2 random)
+{
+	return frac(sin(dot(pos.xy + random, float2(12.9898, 78.233))) * float2(43758.5453, 28001.8384));
+}
+
+float RandS(float2 pos, float2 random)
+{
+	return RandN(pos, random) * 2.0 - 1.0;
+}
+
+// [Jimenez 2014] "Next Generation Post Processing In Call Of Duty Advanced Warfare"  
+float InterleavedGradientNoise (float2 pos, float2 random)
+{
+	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+	return frac(magic.z * frac(dot(pos.xy + random, magic.xy)));
+}
+
+
 // https://www.shadertoy.com/view/4sBSDW
-float Noise(float2 n,float x)
-{
-	n += x;
-
-	return frac(sin(dot(n.xy, float2(12.9898, 78.233))) * 43758.5453);
-}
-
-float SNoise (float2 n, float x)
-{
-	return Noise(n, x) * 2.0 - 1.0;
-}
-
 float Step1(float2 uv,float n)
 {
 	float 
@@ -42,15 +59,15 @@ float Step1(float2 uv,float n)
 	t = 1.0;
 		   
 	return (1.0/(a*4.0+b*4.0-c))*(
-			  SNoise(uv+float2(-1.0,-1.0)*t,n)*a+
-			  SNoise(uv+float2( 0.0,-1.0)*t,n)*b+
-			  SNoise(uv+float2( 1.0,-1.0)*t,n)*a+
-			  SNoise(uv+float2(-1.0, 0.0)*t,n)*b+
-			  SNoise(uv+float2( 0.0, 0.0)*t,n)*c+
-			  SNoise(uv+float2( 1.0, 0.0)*t,n)*b+
-			  SNoise(uv+float2(-1.0, 1.0)*t,n)*a+
-			  SNoise(uv+float2( 0.0, 1.0)*t,n)*b+
-			  SNoise(uv+float2( 1.0, 1.0)*t,n)*a+
+			  RandS(uv+float2(-1.0,-1.0)*t,n)*a+
+			  RandS(uv+float2( 0.0,-1.0)*t,n)*b+
+			  RandS(uv+float2( 1.0,-1.0)*t,n)*a+
+			  RandS(uv+float2(-1.0, 0.0)*t,n)*b+
+			  RandS(uv+float2( 0.0, 0.0)*t,n)*c+
+			  RandS(uv+float2( 1.0, 0.0)*t,n)*b+
+			  RandS(uv+float2(-1.0, 1.0)*t,n)*a+
+			  RandS(uv+float2( 0.0, 1.0)*t,n)*b+
+			  RandS(uv+float2( 1.0, 1.0)*t,n)*a+
 			 0.0);
 }
 
@@ -76,4 +93,23 @@ float3 Step3T(float2 uv, float time)
 	float b=Step2(uv, 0.11*(frac(time)+1.0));    
 	float c=Step2(uv, 0.13*(frac(time)+1.0));
 	return float3(a,b,c);
+}
+
+float Dither8x8Bayer( int x, int y )
+{
+	const float dither[ 64 ] = 
+	{
+		1, 49, 13, 61,  4, 52, 16, 64,
+		33, 17, 45, 29, 36, 20, 48, 32,
+		9, 57,  5, 53, 12, 60,  8, 56,
+		41, 25, 37, 21, 44, 28, 40, 24,
+		3, 51, 15, 63,  2, 50, 14, 62,
+		35, 19, 47, 31, 34, 18, 46, 30,
+		11, 59,  7, 55, 10, 58,  6, 54,
+		43, 27, 39, 23, 42, 26, 38, 22
+	};
+
+	int r = y * 8 + x;
+
+	return (dither[r]-1) / 63;
 }

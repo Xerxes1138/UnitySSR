@@ -24,6 +24,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityStandardAssets.CinematicEffects;
 
 namespace cCharkes
 {
@@ -31,6 +32,10 @@ namespace cCharkes
 	[AddComponentMenu("cCharkes/Image Effects/Rendering/Unity 5 Screen Space Reflection")]
 	public class UnitySSR : MonoBehaviour
 	{
+
+        [SerializeField]
+        bool animateJitter = false;
+
         [Range(20, 80)]
         [SerializeField]
 		int numSteps = 80;
@@ -57,6 +62,14 @@ namespace cCharkes
         private Matrix4x4 worldToCameraMatrix;
         private Matrix4x4 cameraToWorldMatrix;
 
+
+        int maxMipMap = 5;
+        Texture noise;
+
+        float[] dist = new float[5] { 1.0f / 1024.0f, 1.0f / 256.0f, 1.0f / 128.0f, 1.0f / 64.0f, 1.0f / 32.0f };
+
+        int[] mipLevel = new int[5] { 0, 2, 3, 4, 5 };
+
         static Material m_rendererMaterial = null;
 		protected Material rendererMaterial
 		{
@@ -77,7 +90,7 @@ namespace cCharkes
             r.filterMode = filterMode;
             r.wrapMode = TextureWrapMode.Clamp;
             r.useMipMap = useMipMap;
-            r.generateMips = generateMipMap;
+            r.autoGenerateMips = generateMipMap;
             r.Create();
             return r;
         }
@@ -94,7 +107,10 @@ namespace cCharkes
 
 		void OnEnable ()
         {
-			InitCamera();
+            noise = Resources.Load("tex_BlueNoise_256x256_UNI") as Texture2D;
+
+
+            InitCamera();
 		}
 		
 		void InitCamera()
@@ -159,8 +175,8 @@ namespace cCharkes
             int width = m_camera.pixelWidth;
             int height = m_camera.pixelHeight;
 
-            int rayWidth = width / 2;
-            int rayHeight = height / 2;
+            int rayWidth = width;
+            int rayHeight = height ;
 
             UpdateRenderTargets(width, height);
             UpdateMatrices();
@@ -184,35 +200,13 @@ namespace cCharkes
 
                 Graphics.Blit(resolvePass, mipMapBuffer0);
 
-                Vector2[] dirX = new Vector2[5];
-                dirX[0] = new Vector2(1.0f / 1024.0f, 0.0f);
-                dirX[1] = new Vector2(1.0f / 256.0f, 0.0f);
-                dirX[2] = new Vector2(1.0f / 128.0f, 0.0f);
-                dirX[3] = new Vector2(1.0f / 64.0f, 0.0f);
-                dirX[4] = new Vector2(1.0f / 32.0f, 0.0f);
-
-                Vector2[] dirY = new Vector2[5];
-                dirY[0] = new Vector2(0.0f, 1.0f / 1024.0f);
-                dirY[1] = new Vector2(0.0f, 1.0f / 256.0f);
-                dirY[2] = new Vector2(0.0f, 1.0f / 128.0f);
-                dirY[3] = new Vector2(0.0f, 1.0f / 64.0f);
-                dirY[4] = new Vector2(0.0f, 1.0f / 32.0f);
-
-                int[] mipLevel = new int[5];
-                mipLevel[0] = 0;
-                mipLevel[1] = 2;
-                mipLevel[2] = 3;
-                mipLevel[3] = 4;
-                mipLevel[4] = 5;
-
-                int maxMipMap = 5;
                 for (int i = 0; i < maxMipMap; i++)
                 {
-                    rendererMaterial.SetVector("_GaussianDir", dirX[i]);
+                    rendererMaterial.SetVector("_GaussianDir", dist[i] * new Vector2(1.0f, 0.0f));
                     rendererMaterial.SetInt("_MipMapCount", mipLevel[i]);
                     Graphics.Blit(mipMapBuffer0, mipMapBuffer1, rendererMaterial, 2);
 
-                    rendererMaterial.SetVector("_GaussianDir", dirY[i]);
+                    rendererMaterial.SetVector("_GaussianDir", dist[i] * new Vector2(0.0f, 1.0f));
                     rendererMaterial.SetInt("_MipMapCount", mipLevel[i]);
                     Graphics.Blit(mipMapBuffer1, mipMapBuffer0, rendererMaterial, 2);
 
@@ -240,6 +234,12 @@ namespace cCharkes
 
         void UpdateVariables()
         {
+            if(animateJitter)
+                rendererMaterial.SetInt("_UseTemporal", 1);
+            else
+                rendererMaterial.SetInt("_UseTemporal", 0);
+
+            rendererMaterial.SetTexture("_Noise", noise);
             rendererMaterial.SetFloat("_SmoothnessRange", smoothnessRange);
             rendererMaterial.SetFloat("_EdgeFactor", reflectionEdgeFactor);
             rendererMaterial.SetInt("_NumSteps", numSteps);
