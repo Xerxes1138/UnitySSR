@@ -2,7 +2,7 @@
 
 # Unity 5 Screen Space Reflection
 
-An open source screen space reflection for Unity 5 made by Charles Greivelding Thomas - https://twitter.com/Xerxes1138
+An open source screen space reflection for Unity 5 made by https://twitter.com/Xerxes1138
 
 # Features
 
