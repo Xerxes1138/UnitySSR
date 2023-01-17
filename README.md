@@ -1,4 +1,4 @@
-![Unity SSR](https://dl.dropboxusercontent.com/u/1812933/Unity/UnitySSRV2.png)
+![Unity SSR](https://www.dropbox.com/s/9plveijkg0cm14c/UnitySSRV2.png?dl=0)
 
 # Unity 5 Screen Space Reflection
 
@@ -9,7 +9,7 @@ An open source screen space reflection for Unity 5 made by https://twitter.com/X
 * Previous frame reprojection giving one free bounce reflection.
 * Convolved scene buffer mip chain.
 
-![Mip Chain](https://dl.dropboxusercontent.com/u/1812933/Unity/MipChain.png)
+![Mip Chain](https://www.dropbox.com/s/buba77yx04812tl/MipChain.png?dl=0)
 
 
 # Requirements
